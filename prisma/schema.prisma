@@ -1,0 +1,132 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  ADMIN
+  PLAYER
+}
+
+enum QuestionType {
+  MULTIPLE_CHOICE
+  TRUE_FALSE
+}
+
+model User {
+  id        String   @id @default(cuid())
+  name      String
+  email     String   @unique
+  phone     String?  @unique
+  password  String
+  avatarUrl String?
+  role      Role     @default(PLAYER)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  answers      Answer[]
+  predictions  Prediction[]
+  dailyResults DailyResult[]
+
+  @@map("users")
+}
+
+model GameDay {
+  id          String   @id @default(cuid())
+  dayNumber   Int      @unique
+  title       String
+  description String?
+  startTime   DateTime
+  endTime     DateTime
+  isActive    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  questions    Question[]
+  dailyResults DailyResult[]
+
+  @@map("game_days")
+}
+
+model Question {
+  id                 String           @id @default(cuid())
+  gameDayId          String
+  gameDay            GameDay          @relation(fields: [gameDayId], references: [id], onDelete: Cascade)
+  questionText       String
+  questionType       QuestionType     @default(MULTIPLE_CHOICE)
+  order              Int
+  points             Int              @default(10)
+  timeLimitSeconds   Int              @default(30)
+  imageUrl           String?
+  actualCorrectCount Int?
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
+
+  options     QuestionOption[]
+  answers     Answer[]
+  predictions Prediction[]
+
+  @@unique([gameDayId, order])
+  @@map("questions")
+}
+
+model QuestionOption {
+  id         String   @id @default(cuid())
+  questionId String
+  question   Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  text       String
+  isCorrect  Boolean  @default(false)
+
+  answers    Answer[]
+
+  @@map("question_options")
+}
+
+model Answer {
+  id               String         @id @default(cuid())
+  userId           String
+  user             User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  questionId       String
+  question         Question       @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  selectedOptionId String
+  selectedOption   QuestionOption @relation(fields: [selectedOptionId], references: [id], onDelete: Cascade)
+  answeredAt       DateTime       @default(now())
+  timeSpentMs      Int
+
+  @@unique([userId, questionId])
+  @@map("answers")
+}
+
+model Prediction {
+  id                    String   @id @default(cuid())
+  userId                String
+  user                  User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  questionId            String
+  question              Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  predictedCorrectCount Int
+  submittedAt           DateTime @default(now())
+
+  @@unique([userId, questionId])
+  @@map("predictions")
+}
+
+model DailyResult {
+  id             String  @id @default(cuid())
+  userId         String
+  user           User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  gameDayId      String
+  gameDay        GameDay @relation(fields: [gameDayId], references: [id], onDelete: Cascade)
+  correctAnswers Int     @default(0)
+  totalDeviation Int     @default(0)
+  totalTimeMs    Int     @default(0)
+  dailyScore     Float   @default(0)
+  rank           Int?
+  isWinner       Boolean @default(false)
+  createdAt      DateTime @default(now())
+
+  @@unique([userId, gameDayId])
+  @@map("daily_results")
+}
