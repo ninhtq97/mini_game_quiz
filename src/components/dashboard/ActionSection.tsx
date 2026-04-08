@@ -12,7 +12,7 @@ const itemVariants = {
   visible: { opacity: 1, y: 0 },
 };
 
-export default function ActionSection({
+export default function DashboardActionSection({
   loading,
   quizData,
   onPlay,

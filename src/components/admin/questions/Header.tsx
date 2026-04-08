@@ -4,7 +4,7 @@ interface HeaderProps {
   questionsCount: number;
 }
 
-export default function Header({ questionsCount }: HeaderProps) {
+export default function AdminQuestionsHeader({ questionsCount }: HeaderProps) {
   return (
     <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
       <h1 className="text-3xl font-bold">❓ Quản lý câu hỏi</h1>

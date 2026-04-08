@@ -30,12 +30,12 @@ src/
 │   └── page.tsx            # Home page
 ├── components/             # Reusable components
 │   ├── play/               # Play-specific components
-│   │   ├── PlayComplete.tsx
-│   │   ├── PlayHeader.tsx
-│   │   ├── PlayTimer.tsx
-│   │   ├── PredictionCard.tsx
-│   │   └── QuestionCard.tsx
-│   └── types.ts            # Shared types
+│   │   ├── Complete.tsx
+│   │   ├── Header.tsx
+│   │   ├── Timer.tsx
+│   │   ├── Prediction.tsx
+│   │   └── Form.tsx
+│   └── types/              # Shared types
 ├── lib/                    # Utility functions
 │   ├── api.ts              # API client
 │   └── utils.ts            # General utilities

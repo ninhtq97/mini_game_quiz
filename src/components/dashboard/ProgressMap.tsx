@@ -10,7 +10,9 @@ const itemVariants = {
   visible: { opacity: 1, y: 0 },
 };
 
-export default function ProgressMap({ currentDayNumber }: ProgressMapProps) {
+export default function DashboardProgressMap({
+  currentDayNumber,
+}: ProgressMapProps) {
   return (
     <motion.div variants={itemVariants} className="mt-6">
       <Card className="glass border border-white/5">

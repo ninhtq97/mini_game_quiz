@@ -1,7 +1,7 @@
 import {
   Button,
   FieldError,
-  Form as HeroUIForm,
+  Form,
   Input,
   Label,
   ListBox,
@@ -43,7 +43,7 @@ interface FormProps {
   onSubmit: (data: QuestionFormData) => void;
 }
 
-export default function Form({
+export default function AdminQuestionsForm({
   formOpen,
   editingQuestion,
   saving,
@@ -140,7 +140,7 @@ export default function Form({
               </Button>
             </div>
 
-            <HeroUIForm onSubmit={handleSubmit(onSubmit)}>
+            <Form onSubmit={handleSubmit(onSubmit)}>
               <div className="flex flex-wrap gap-6 w-full">
                 <div className="flex-4 min-w-62.5 space-y-4">
                   <Controller
@@ -384,7 +384,7 @@ export default function Form({
                   </div>
                 </div>
               </div>
-            </HeroUIForm>
+            </Form>
           </div>
         </motion.div>
       )}

@@ -24,7 +24,7 @@ interface PredictionCardProps {
   onSubmitPrediction: (data: PredictionForm) => Promise<void>;
 }
 
-export default function PredictionCard({
+export default function PlayPredictionCard({
   currentQuestion,
   predictionSubmitted,
   onSubmitPrediction,
@@ -41,7 +41,9 @@ export default function PredictionCard({
 
   // Reset form when question changes
   useEffect(() => {
-    reset({ predictedCorrectCount: "" });
+    if (currentQuestion.id) {
+      reset({ predictedCorrectCount: "" });
+    }
   }, [currentQuestion.id, reset]);
 
   return (

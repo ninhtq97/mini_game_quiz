@@ -10,7 +10,7 @@ interface FilterProps {
   onOpenCreate: () => void;
 }
 
-export default function Filter({
+export default function AdminQuestionsFilter({
   days,
   filterDayId,
   onFilterChange,

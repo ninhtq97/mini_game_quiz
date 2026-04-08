@@ -7,7 +7,7 @@ interface HeaderProps {
   onOpenCreate: () => void;
 }
 
-export default function Header({
+export default function AdminDaysHeader({
   daysCount,
   formOpen,
   onOpenCreate,

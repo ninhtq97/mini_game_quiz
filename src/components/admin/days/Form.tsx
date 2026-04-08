@@ -4,7 +4,7 @@ import {
   DateField,
   DatePicker,
   FieldError,
-  Form as HeroUIForm,
+  Form,
   Input,
   Label,
   Switch,
@@ -77,6 +77,7 @@ function DatePickerField({
       value={value}
       onChange={onChange}
       isInvalid={isInvalid}
+      shouldForceLeadingZeros
     >
       <Label
         className={`text-xs font-bold uppercase tracking-wider ${labelColor}`}
@@ -129,7 +130,7 @@ interface FormProps {
   daysCount: number;
 }
 
-export default function Form({
+export default function AdminDaysForm({
   formOpen,
   editingDay,
   saving,
@@ -207,7 +208,7 @@ export default function Form({
               </Button>
             </div>
 
-            <HeroUIForm onSubmit={handleSubmit(onSubmit)}>
+            <Form onSubmit={handleSubmit(onSubmit)}>
               <div className="flex flex-wrap gap-6 w-full">
                 <div className="flex-5 min-w-75 space-y-4">
                   <div className="grid grid-cols-3 gap-3">
@@ -382,7 +383,7 @@ export default function Form({
                   </div>
                 </div>
               </div>
-            </HeroUIForm>
+            </Form>
           </div>
         </motion.div>
       )}

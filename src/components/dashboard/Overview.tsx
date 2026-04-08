@@ -17,7 +17,11 @@ const itemVariants = {
   visible: { opacity: 1, y: 0 },
 };
 
-export default function Overview({ userName, loading, myRank }: OverviewProps) {
+export default function DashboardOverview({
+  userName,
+  loading,
+  myRank,
+}: OverviewProps) {
   return (
     <>
       <motion.div variants={itemVariants} className="mb-8">

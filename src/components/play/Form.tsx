@@ -1,6 +1,7 @@
 import { Button, Card } from "@heroui/react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { motion } from "framer-motion";
+import { useEffect } from "react";
 import { Controller, useForm } from "react-hook-form";
 import * as z from "zod";
 import type { QuestionData } from "../../types/play";
@@ -18,7 +19,7 @@ interface QuestionCardProps {
   predictionSubmitted: boolean;
 }
 
-export default function QuestionCard({
+export default function PlayQuestionCard({
   currentQuestion,
   timeLeft,
   onSubmitAnswer,
@@ -36,6 +37,13 @@ export default function QuestionCard({
     resolver: zodResolver(answerSchema),
     defaultValues: { answerId: "" },
   });
+
+  // Reset form when question changes
+  useEffect(() => {
+    if (currentQuestion.id) {
+      reset({ answerId: "" });
+    }
+  }, [currentQuestion.id, reset]);
 
   return (
     <>

@@ -12,7 +12,7 @@ interface TableProps {
   onOpenCreate: () => void;
 }
 
-export default function Table({
+export default function AdminQuestionsTable({
   questions,
   loading,
   editingQuestion,

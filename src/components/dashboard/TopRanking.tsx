@@ -13,7 +13,7 @@ const itemVariants = {
   visible: { opacity: 1, y: 0 },
 };
 
-export default function TopRanking({
+export default function DashboardTopRanking({
   loading,
   leaderboard,
   currentUserId,
