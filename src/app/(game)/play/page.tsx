@@ -1,108 +1,54 @@
 "use client";
 
-import {
-  Button,
-  Card,
-  Chip,
-  FieldError,
-  Input,
-  ProgressBar,
-  Skeleton,
-  TextField,
-} from "@heroui/react";
-import { zodResolver } from "@hookform/resolvers/zod";
+import { Button, Skeleton } from "@heroui/react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useRef, useState } from "react";
-import { Controller, useForm } from "react-hook-form";
-import * as z from "zod";
-
-const predictionSchema = z.object({
-  predictedCorrectCount: z
-    .string()
-    .min(1, "Vui lòng nhập số")
-    .refine(
-      (val) => !Number.isNaN(Number(val)) && Number.isInteger(Number(val)),
-      "Vui lòng nhập số nguyên",
-    )
-    .refine((val) => Number(val) >= 0, "Dự đoán phải từ 0 trở lên"),
-});
-type PredictionForm = z.infer<typeof predictionSchema>;
-
-interface QuestionData {
-  id: string;
-  questionText: string;
-  questionType: string;
-  options: { id: string; text: string; isCorrect?: boolean }[];
-  order: number;
-  points: number;
-  timeLimitSeconds: number;
-  answered: boolean;
-  predicted: boolean;
-  userAnswer?: { isCorrect: boolean; selectedOptionId: string } | null;
-  userPrediction?: { predictedCorrectCount: number } | null;
-}
-
-interface GameDayData {
-  id: string;
-  dayNumber: number;
-  title: string;
-  description?: string;
-  startTime: string;
-  endTime: string;
-}
+import { useEffect, useRef, useState } from "react";
+import { useQuiz } from "@/app/quiz-provider";
+import Complete from "@/components/play/Complete";
+import Form, { type AnswerForm } from "@/components/play/Form";
+import Header from "@/components/play/Header";
+import Prediction, { type PredictionForm } from "@/components/play/Prediction";
+import Timer from "@/components/play/Timer";
+import type { QuestionData } from "@/types/play";
 
 export default function PlayPage() {
   const router = useRouter();
-  const [status, setStatus] = useState<string>("loading");
-  const [gameDay, setGameDay] = useState<GameDayData | null>(null);
-  const [questions, setQuestions] = useState<QuestionData[]>([]);
+  const { quizData, loading, setQuizData } = useQuiz();
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [timeLeft, setTimeLeft] = useState(30);
 
-  const {
-    control,
-    handleSubmit,
-    reset,
-    formState: { errors, isSubmitting: isFormSubmitting },
-  } = useForm<PredictionForm>({
-    resolver: zodResolver(predictionSchema),
-    defaultValues: { predictedCorrectCount: "" },
-  });
-
   const [showPrediction, setShowPrediction] = useState(false);
   const [predictionSubmitted, setPredictionSubmitted] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
   const [scoreAnimation, setScoreAnimation] = useState<number | null>(null);
+
   const startTimeRef = useRef<number>(0);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const [initialized, setInitialized] = useState(false);
 
-  // Load quiz data
+  // Initialize current question
   useEffect(() => {
-    async function loadQuiz() {
-      try {
-        const res = await fetch("/api/quiz/today");
-        const data = await res.json();
-        setStatus(data.status);
-        if (data.status === "active") {
-          setGameDay(data.gameDay);
-          setQuestions(data.questions);
-          // Find first unanswered or unpredicted question
-          const firstUnanswered = data.questions.findIndex(
-            (q: QuestionData) => !q.answered || !q.predicted,
-          );
-          if (firstUnanswered >= 0) {
-            setCurrentQuestionIndex(firstUnanswered);
-          } else {
-            setCurrentQuestionIndex(data.questions.length - 1);
-          }
-        }
-      } catch {
-        setStatus("error");
+    if (
+      !loading &&
+      quizData?.status === "active" &&
+      quizData.questions &&
+      !initialized
+    ) {
+      const firstUnanswered = quizData.questions.findIndex(
+        (q: QuestionData) => !q.answered || !q.predicted,
+      );
+      if (firstUnanswered >= 0) {
+        setCurrentQuestionIndex(firstUnanswered);
+      } else {
+        setCurrentQuestionIndex(quizData.questions.length - 1);
       }
+      setInitialized(true);
     }
-    loadQuiz();
-  }, []);
+  }, [loading, quizData, initialized]);
+
+  const questions = quizData?.questions || [];
+  const status = loading ? "loading" : quizData?.status || "error";
+  const gameDay = quizData?.gameDay || null;
 
   const currentQuestion = questions[currentQuestionIndex];
 
@@ -129,40 +75,41 @@ export default function PlayPage() {
   }, [currentQuestion]);
 
   // Submit answer
-  const handleSubmitAnswer = useCallback(
-    async (answerId: string) => {
-      if (submitting || currentQuestion.answered || !currentQuestion) return;
+  const onSubmitAnswer = async (formData: AnswerForm) => {
+    if (currentQuestion.answered || !currentQuestion) return;
 
-      setSubmitting(true);
-      if (timerRef.current) clearInterval(timerRef.current);
+    if (timerRef.current) clearInterval(timerRef.current);
 
-      const timeSpentMs = Date.now() - startTimeRef.current;
+    const timeSpentMs = Date.now() - startTimeRef.current;
 
-      try {
-        const res = await fetch("/api/quiz/submit", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            questionId: currentQuestion.id,
-            selectedOptionId: answerId,
-            timeSpentMs,
-          }),
-        });
-        const data = await res.json();
+    try {
+      const res = await fetch("/api/quiz/submit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          questionId: currentQuestion.id,
+          selectedOptionId: formData.answerId,
+          timeSpentMs,
+        }),
+      });
+      const data = await res.json();
 
-        if (!res.ok) {
-          throw new Error(data.message || "Lỗi nộp bài");
-        }
+      if (!res.ok) {
+        throw new Error(data.message || "Lỗi nộp bài");
+      }
 
-        setQuestions((prev) =>
-          prev.map((q) =>
+      setQuizData((prev) => {
+        if (!prev || !prev.questions) return prev;
+        return {
+          ...prev,
+          questions: prev.questions.map((q) =>
             q.id === currentQuestion.id
               ? {
                   ...q,
                   answered: true,
                   userAnswer: {
                     isCorrect: data.isCorrect,
-                    selectedOptionId: answerId,
+                    selectedOptionId: formData.answerId,
                   },
                   options: q.options.map((opt) => ({
                     ...opt,
@@ -174,27 +121,24 @@ export default function PlayPage() {
                 }
               : q,
           ),
-        );
+        };
+      });
 
-        if (data.isCorrect) {
-          setScoreAnimation(currentQuestion.points);
-          setTimeout(() => setScoreAnimation(null), 2000);
-        }
-
-        // Show prediction after a delay
-        setTimeout(() => {
-          if (!currentQuestion.predicted) {
-            setShowPrediction(true);
-          }
-        }, 1500);
-      } catch {
-        console.error("Failed to submit answer");
-      } finally {
-        setSubmitting(false);
+      if (data.isCorrect) {
+        setScoreAnimation(currentQuestion.points);
+        setTimeout(() => setScoreAnimation(null), 2000);
       }
-    },
-    [submitting, currentQuestion],
-  );
+
+      // Show prediction after a delay
+      setTimeout(() => {
+        if (!currentQuestion.predicted) {
+          setShowPrediction(true);
+        }
+      }, 1500);
+    } catch {
+      console.error("Failed to submit answer");
+    }
+  };
 
   // Submit prediction
   const onSubmitPrediction = async (data: PredictionForm) => {
@@ -211,19 +155,23 @@ export default function PlayPage() {
       });
 
       setPredictionSubmitted(true);
-      setQuestions((prev) =>
-        prev.map((q) =>
-          q.id === currentQuestion.id
-            ? {
-                ...q,
-                predicted: true,
-                userPrediction: {
-                  predictedCorrectCount: Number(data.predictedCorrectCount),
-                },
-              }
-            : q,
-        ),
-      );
+      setQuizData((prev) => {
+        if (!prev || !prev.questions) return prev;
+        return {
+          ...prev,
+          questions: prev.questions.map((q) =>
+            q.id === currentQuestion.id
+              ? {
+                  ...q,
+                  predicted: true,
+                  userPrediction: {
+                    predictedCorrectCount: Number(data.predictedCorrectCount),
+                  },
+                }
+              : q,
+          ),
+        };
+      });
 
       // Move to next question after delay
       setTimeout(() => {
@@ -246,7 +194,6 @@ export default function PlayPage() {
   const resetQuestionState = () => {
     setShowPrediction(false);
     setPredictionSubmitted(false);
-    reset({ predictedCorrectCount: "" });
   };
 
   // Loading state
@@ -282,9 +229,7 @@ export default function PlayPage() {
     );
   }
 
-  const timerProgress = (timeLeft / currentQuestion.timeLimitSeconds) * 100;
   const allDone = questions.every((q) => q.answered && q.predicted);
-  const isAnswered = currentQuestion.answered;
 
   return (
     <div className="max-w-3xl mx-auto px-4 py-6 sm:py-8 relative">
@@ -303,80 +248,19 @@ export default function PlayPage() {
         )}
       </AnimatePresence>
 
-      {/* Header */}
-      <motion.div
-        className="flex items-center justify-between mb-6"
-        initial={{ opacity: 0, y: -10 }}
-        animate={{ opacity: 1, y: 0 }}
-      >
-        <div>
-          <Chip color="accent" variant="soft" size="sm" className="mb-1">
-            Ngày {gameDay?.dayNumber}
-          </Chip>
-          <h1 className="text-xl sm:text-2xl font-bold">{gameDay?.title}</h1>
-        </div>
-        <div className="text-right">
-          <p className="text-sm text-slate-400">Câu hỏi</p>
-          <p className="text-2xl font-bold">
-            <span className="text-primary-400">{currentQuestionIndex + 1}</span>
-            <span className="text-slate-600">/{questions.length}</span>
-          </p>
-        </div>
-      </motion.div>
-
-      {/* Question Progress */}
-      <div className="flex gap-2 mb-6">
-        {questions.map((q, i) => (
-          <motion.div
-            key={q.id}
-            className={`h-1.5 flex-1 rounded-full transition-colors ${
-              !q.answered
-                ? i === currentQuestionIndex
-                  ? "bg-primary-500"
-                  : "bg-white/10"
-                : q.userAnswer?.isCorrect
-                  ? "bg-neon-green"
-                  : "bg-red-500"
-            }`}
-            layoutId={`progress-${q.id}`}
-          />
-        ))}
-      </div>
+      <Header
+        gameDay={gameDay}
+        currentQuestionIndex={currentQuestionIndex}
+        totalQuestions={questions.length}
+        questions={questions}
+      />
 
       {/* Timer */}
       {!currentQuestion.answered && (
-        <motion.div
-          className="mb-6"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-        >
-          <div className="flex justify-between text-sm mb-2">
-            <span className="text-slate-400">Thời gian</span>
-            <span
-              className={`font-bold ${
-                timeLeft <= 5
-                  ? "text-red-400 animate-pulse"
-                  : timeLeft <= 10
-                    ? "text-yellow-400"
-                    : "text-neon-green"
-              }`}
-            >
-              {timeLeft}s
-            </span>
-          </div>
-          <ProgressBar
-            value={timerProgress}
-            color={
-              timeLeft <= 5 ? "danger" : timeLeft <= 10 ? "warning" : "success"
-            }
-            className="h-1.5 mb-2"
-            aria-label="Timer"
-          >
-            <ProgressBar.Track>
-              <ProgressBar.Fill />
-            </ProgressBar.Track>
-          </ProgressBar>
-        </motion.div>
+        <Timer
+          timeLeft={timeLeft}
+          timeLimitSeconds={currentQuestion.timeLimitSeconds}
+        />
       )}
 
       {/* Question Card */}
@@ -388,184 +272,22 @@ export default function PlayPage() {
           exit={{ opacity: 0, x: -50 }}
           transition={{ duration: 0.3 }}
         >
-          <Card className="glass border border-white/5 mb-6">
-            <Card.Content className="p-6 sm:p-8">
-              <h2 className="text-lg sm:text-xl font-semibold leading-relaxed">
-                {currentQuestion.questionText}
-              </h2>
-            </Card.Content>
-          </Card>
-
-          {/* Answer Options */}
+          {/* Answer Options Form */}
           {!showPrediction ? (
-            <div className="space-y-3">
-              {currentQuestion.options.map((option, i) => {
-                const isSelected =
-                  currentQuestion.userAnswer?.selectedOptionId === option.id;
-                const isCorrectOption =
-                  isSelected && currentQuestion.userAnswer?.isCorrect;
-                const letters = ["A", "B", "C", "D"];
-
-                let optionClass = "glass border border-white/10 option-hover";
-                if (isAnswered) {
-                  if (isCorrectOption) {
-                    optionClass = "option-correct";
-                  } else if (isSelected && !isCorrectOption) {
-                    optionClass = "option-incorrect";
-                  } else {
-                    optionClass = "glass border border-white/5 opacity-50";
-                  }
-                }
-
-                return (
-                  <motion.button
-                    key={option.id}
-                    className={`w-full p-4 rounded-xl text-left flex items-center gap-4 transition-all ${optionClass}`}
-                    onClick={() => !isAnswered && handleSubmitAnswer(option.id)}
-                    disabled={isAnswered || submitting || timeLeft === 0}
-                    whileHover={!isAnswered ? { scale: 1.01 } : {}}
-                    whileTap={!isAnswered ? { scale: 0.99 } : {}}
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: i * 0.05 }}
-                  >
-                    <span
-                      className={`w-10 h-10 rounded-lg flex items-center justify-center font-bold text-sm shrink-0 ${
-                        isAnswered && isCorrectOption
-                          ? "bg-neon-green/20 text-neon-green"
-                          : isAnswered && isSelected && !isCorrectOption
-                            ? "bg-red-500/20 text-red-400"
-                            : "bg-white/10 text-slate-400"
-                      }`}
-                    >
-                      {isAnswered && isCorrectOption
-                        ? "✓"
-                        : isAnswered && isSelected && !isCorrectOption
-                          ? "✗"
-                          : letters[i]}
-                    </span>
-                    <span className="font-medium">{option.text}</span>
-                  </motion.button>
-                );
-              })}
-
-              {/* After answer: show result message */}
-              {isAnswered && (
-                <div className="space-y-4 mt-4">
-                  <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className={`p-4 rounded-xl text-center font-semibold ${
-                      currentQuestion.userAnswer?.isCorrect
-                        ? "bg-neon-green/10 border border-neon-green/20 text-neon-green"
-                        : "bg-red-500/10 border border-red-500/20 text-red-400"
-                    }`}
-                  >
-                    {currentQuestion.userAnswer?.isCorrect
-                      ? "🎉 Chính xác!"
-                      : "😔 Sai rồi!"}
-                  </motion.div>
-
-                  {!currentQuestion.predicted && !predictionSubmitted && (
-                    <motion.div
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      transition={{ delay: 0.5 }}
-                    >
-                      <Button
-                        variant="primary"
-                        fullWidth
-                        onPress={() => setShowPrediction(true)}
-                        className="font-semibold shadow-[0_0_15px_rgba(var(--color-primary-500),0.5)] py-6 rounded-xl"
-                      >
-                        Tiếp tục dự đoán →
-                      </Button>
-                    </motion.div>
-                  )}
-                </div>
-              )}
-            </div>
+            <Form
+              currentQuestion={currentQuestion}
+              timeLeft={timeLeft}
+              onSubmitAnswer={onSubmitAnswer}
+              onShowPrediction={() => setShowPrediction(true)}
+              predictionSubmitted={predictionSubmitted}
+            />
           ) : (
             /* Prediction Form */
-            <motion.div
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-            >
-              <Card className="glass border border-white/5">
-                <Card.Content className="p-6 sm:p-8">
-                  <div className="text-center mb-6">
-                    <div className="text-4xl mb-3">🔮</div>
-                    <h3 className="text-lg font-bold">Dự đoán kết quả</h3>
-                    <p className="text-slate-400 text-sm mt-1">
-                      Bạn nghĩ có bao nhiêu người sẽ trả lời đúng câu này?
-                    </p>
-                  </div>
-
-                  {!predictionSubmitted ? (
-                    <form
-                      onSubmit={handleSubmit(onSubmitPrediction)}
-                      className="w-full"
-                    >
-                      <div className="mb-6 mt-4">
-                        <Controller
-                          name="predictedCorrectCount"
-                          control={control}
-                          render={({ field }) => (
-                            <TextField
-                              isInvalid={!!errors.predictedCorrectCount}
-                              aria-label="Nhập số người dự đoán"
-                              className="relative bg-white/5 border border-white/10 rounded-2xl flex flex-col px-6 py-5 h-auto justify-center"
-                            >
-                              <div className="relative flex items-center justify-center w-full h-14">
-                                <Input
-                                  {...field}
-                                  type="number"
-                                  min={0}
-                                  placeholder="Nhập số..."
-                                  className="bg-transparent w-full text-center text-4xl font-black outline-none text-white placeholder:text-slate-600 appearance-none"
-                                />
-                                <div className="absolute right-0 top-1/2 -translate-y-1/2 text-slate-400 text-lg font-medium pointer-events-none">
-                                  người
-                                </div>
-                              </div>
-                              <FieldError className="text-sm text-red-400 mt-3 text-center font-medium">
-                                {errors.predictedCorrectCount?.message}
-                              </FieldError>
-                            </TextField>
-                          )}
-                        />
-                      </div>
-
-                      <Button
-                        type="submit"
-                        variant="secondary"
-                        fullWidth
-                        isDisabled={isFormSubmitting}
-                        className="font-semibold shadow-lg rounded-lg py-6"
-                      >
-                        {isFormSubmitting
-                          ? "Đang xử lý..."
-                          : "Xác nhận dự đoán 🎯"}
-                      </Button>
-                    </form>
-                  ) : (
-                    <motion.div
-                      initial={{ opacity: 0, scale: 0.9 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      className="text-center py-4"
-                    >
-                      <div className="text-3xl mb-2">✅</div>
-                      <p className="font-semibold text-neon-green">
-                        Đã ghi nhận dự đoán:{" "}
-                        {currentQuestion.userPrediction
-                          ?.predictedCorrectCount ?? 0}{" "}
-                        người
-                      </p>
-                    </motion.div>
-                  )}
-                </Card.Content>
-              </Card>
-            </motion.div>
+            <Prediction
+              currentQuestion={currentQuestion}
+              predictionSubmitted={predictionSubmitted}
+              onSubmitPrediction={onSubmitPrediction}
+            />
           )}
 
           {/* Navigation after done */}
@@ -586,36 +308,7 @@ export default function PlayPage() {
                     Câu tiếp theo →
                   </Button>
                 ) : allDone ? (
-                  <div className="w-full text-center">
-                    <motion.div
-                      initial={{ opacity: 0, scale: 0.9 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      className="glass rounded-2xl p-6 border border-neon-green/20"
-                    >
-                      <div className="text-4xl mb-3">🎊</div>
-                      <h3 className="text-xl font-bold mb-2">Hoàn thành!</h3>
-                      <p className="text-slate-400 text-sm mb-4">
-                        Bạn đã hoàn thành tất cả câu hỏi hôm nay. Kết quả sẽ
-                        được tổng hợp khi ngày chơi kết thúc.
-                      </p>
-                      <div className="flex gap-3 justify-center">
-                        <Button
-                          onPress={() => router.push("/leaderboard")}
-                          variant="primary"
-                          className="shadow-lg rounded-full"
-                        >
-                          Xem BXH 🏆
-                        </Button>
-                        <Button
-                          onPress={() => router.push("/dashboard")}
-                          variant="outline"
-                          className="border-white/10 rounded-full"
-                        >
-                          Dashboard
-                        </Button>
-                      </div>
-                    </motion.div>
-                  </div>
+                  <Complete />
                 ) : null}
               </motion.div>
             )}

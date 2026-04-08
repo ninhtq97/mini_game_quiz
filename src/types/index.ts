@@ -1,3 +1,6 @@
+export * from "./admin";
+export * from "./play";
+
 export interface QuestionOption {
   id: string;
   text: string;

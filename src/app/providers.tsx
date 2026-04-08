@@ -9,6 +9,7 @@ import {
   type ThemeProviderProps,
 } from "next-themes";
 import type { FC } from "react";
+import { QuizProvider } from "@/app/quiz-provider";
 import { cn } from "@/lib/utils";
 
 const Providers: FC<
@@ -27,9 +28,11 @@ const Providers: FC<
       >
         <SessionProvider session={session} refetchOnWindowFocus={false}>
           <I18nProvider locale="vi">
-            <main className={cn("relative flex flex-col gap-3")}>
-              {children}
-            </main>
+            <QuizProvider>
+              <main className={cn("relative flex flex-col gap-3")}>
+                {children}
+              </main>
+            </QuizProvider>
           </I18nProvider>
         </SessionProvider>
       </NextThemesProvider>

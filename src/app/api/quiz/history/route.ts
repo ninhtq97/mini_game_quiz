@@ -74,7 +74,9 @@ export async function GET() {
 
         const predMap = new Map(predictions.map((p) => [p.questionId, p]));
 
-        const currentCorrect = answers.filter(a => a.selectedOption.isCorrect).length;
+        const currentCorrect = answers.filter(
+          (a) => a.selectedOption.isCorrect,
+        ).length;
         const currentTime = answers.reduce((sum, a) => sum + a.timeSpentMs, 0);
 
         return {

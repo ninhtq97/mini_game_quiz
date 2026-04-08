@@ -79,12 +79,10 @@ export async function POST(request: Request) {
         timeLimitSeconds: timeLimitSeconds || 30,
         imageUrl: imageUrl || null,
         options: {
-          create: options.map(
-            (opt: { text: string; isCorrect: boolean }) => ({
-              text: opt.text,
-              isCorrect: opt.isCorrect,
-            }),
-          ),
+          create: options.map((opt: { text: string; isCorrect: boolean }) => ({
+            text: opt.text,
+            isCorrect: opt.isCorrect,
+          })),
         },
       },
       include: { options: true },
@@ -116,12 +114,10 @@ export async function PUT(request: Request) {
     if (options && Array.isArray(options)) {
       updateData.options = {
         deleteMany: {},
-        create: options.map(
-          (opt: { text: string; isCorrect: boolean }) => ({
-            text: opt.text,
-            isCorrect: opt.isCorrect,
-          }),
-        ),
+        create: options.map((opt: { text: string; isCorrect: boolean }) => ({
+          text: opt.text,
+          isCorrect: opt.isCorrect,
+        })),
       };
     }
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { Button, Card, Skeleton } from "@heroui/react";
+import { Button, Card, Skeleton, toast } from "@heroui/react";
 import { motion } from "framer-motion";
 import { useEffect, useState } from "react";
 
@@ -36,16 +36,23 @@ export default function AdminResultsPage() {
       const data = await res.json();
 
       if (res.ok) {
-        alert("Tính kết quả thành công: " + data.message);
+        toast.success("Thành công", {
+          description: data.message,
+        });
         // Reload days to update counts
         const dRes = await fetch("/api/admin/days");
         const dData = await dRes.json();
         setDays(dData.days || []);
       } else {
-        alert("Lỗi: " + data.message);
+        toast.danger("Thất bại", {
+          description: data.message,
+        });
       }
     } catch (e) {
       console.error(e);
+      toast.danger("Lỗi", {
+        description: "Đã xảy ra lỗi hệ thống khi tính kết quả",
+      });
     } finally {
       setCalculating(null);
     }
