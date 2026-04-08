@@ -226,10 +226,8 @@ export default function AdminQuestionsPage() {
             <Select
               aria-label="Lọc theo ngày"
               placeholder="Tất cả các ngày"
-              selectedKey={filterDayId || null}
-              onSelectionChange={(key) =>
-                setFilterDayId(key ? String(key) : "")
-              }
+              value={filterDayId || null}
+              onChange={(key) => setFilterDayId(key ? String(key) : "")}
             >
               <Select.Trigger className="border-white/10 hover:border-white/20 rounded-xl border bg-white/5 px-4 py-2.5 w-full transition-colors">
                 <Select.Value className="text-sm font-medium" />
@@ -312,8 +310,8 @@ export default function AdminQuestionsPage() {
                           <Select
                             aria-label="Chọn ngày"
                             placeholder="Chọn ngày"
-                            selectedKey={field.value || null}
-                            onSelectionChange={(key) =>
+                            value={field.value || null}
+                            onChange={(key) =>
                               field.onChange(key ? String(key) : "")
                             }
                           >
