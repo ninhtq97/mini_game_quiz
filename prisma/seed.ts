@@ -1,3 +1,7 @@
+import { config } from "dotenv";
+
+config({ override: true });
+
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "@prisma/client";
 import { hash } from "bcryptjs";
@@ -51,106 +55,111 @@ async function main() {
   }
   console.log(`✅ Created ${players.length} test players`);
 
-  // Create Day 1
+  // Create 20 Days
   const now = new Date();
-  const startOfDay = new Date(now);
-  startOfDay.setHours(0, 0, 0, 0);
-  const endOfDay = new Date(now);
-  endOfDay.setHours(23, 59, 59, 999);
 
-  const day1 = await prisma.gameDay.upsert({
-    where: { dayNumber: 1 },
-    update: {
-      isActive: true,
-      startTime: startOfDay,
-      endTime: endOfDay,
-    },
-    create: {
-      dayNumber: 1,
-      title: "Kiến thức tổng hợp",
-      description: "Khởi đầu với những câu hỏi kiến thức phổ thông",
-      startTime: startOfDay,
-      endTime: endOfDay,
-      isActive: true,
-    },
-  });
-  console.log(`✅ Day 1: ${day1.title}`);
+  for (let dayIndex = 1; dayIndex <= 20; dayIndex++) {
+    const startOfDay = new Date(now);
+    // Add (dayIndex - 1) days to today
+    startOfDay.setDate(startOfDay.getDate() + (dayIndex - 1));
+    startOfDay.setHours(0, 0, 0, 0);
 
-  // Create questions for Day 1
-  const questionsData = [
-    {
-      questionText: "Thủ đô của Việt Nam là gì?",
-      options: [
-        { id: "a", text: "Hà Nội", isCorrect: true },
-        { id: "b", text: "TP. Hồ Chí Minh", isCorrect: false },
-        { id: "c", text: "Đà Nẵng", isCorrect: false },
-        { id: "d", text: "Huế", isCorrect: false },
-      ],
-      correctAnswer: "a",
-      order: 1,
-    },
-    {
-      questionText: "Sông nào dài nhất Việt Nam?",
-      options: [
-        { id: "a", text: "Sông Hồng", isCorrect: false },
-        { id: "b", text: "Sông Mekong (Cửu Long)", isCorrect: true },
-        { id: "c", text: "Sông Đà", isCorrect: false },
-        { id: "d", text: "Sông Thái Bình", isCorrect: false },
-      ],
-      correctAnswer: "b",
-      order: 2,
-    },
-    {
-      questionText: "Năm sinh của Chủ tịch Hồ Chí Minh?",
-      options: [
-        { id: "a", text: "1888", isCorrect: false },
-        { id: "b", text: "1889", isCorrect: false },
-        { id: "c", text: "1890", isCorrect: true },
-        { id: "d", text: "1891", isCorrect: false },
-      ],
-      correctAnswer: "c",
-      order: 3,
-    },
-  ];
+    const endOfDay = new Date(startOfDay);
+    endOfDay.setHours(23, 59, 59, 999);
 
-  for (const q of questionsData) {
-    await prisma.question.upsert({
-      where: {
-        gameDayId_order: {
-          gameDayId: day1.id,
-          order: q.order,
-        },
-      },
+    const gameDay = await prisma.gameDay.upsert({
+      where: { dayNumber: dayIndex },
       update: {
-        questionText: q.questionText,
-        options: {
-          deleteMany: {},
-          create: q.options.map((opt) => ({
-            text: opt.text,
-            isCorrect: opt.isCorrect,
-          })),
-        },
+        isActive: true,
+        startTime: startOfDay,
+        endTime: endOfDay,
+        title: `Thử thách Ngày ${dayIndex}`,
       },
       create: {
-        gameDayId: day1.id,
-        questionText: q.questionText,
-        questionType: "MULTIPLE_CHOICE",
-        order: q.order,
-        points: 10,
-        timeLimitSeconds: 30,
-        options: {
-          create: q.options.map((opt, index) => ({
-            text: opt.text,
-            isCorrect: opt.isCorrect,
-            order: index,
-          })),
-        },
+        dayNumber: dayIndex,
+        title: `Thử thách Ngày ${dayIndex}`,
+        description: `Bộ câu hỏi ngẫu nhiên cho ngày thi đấu thứ ${dayIndex}`,
+        startTime: startOfDay,
+        endTime: endOfDay,
+        isActive: true,
       },
     });
-  }
-  console.log(`✅ Created ${questionsData.length} questions for Day 1`);
 
-  console.log("\n🎉 Seeding completed!");
+    console.log(
+      `✅ Day ${dayIndex} created: ${startOfDay.toLocaleDateString()}`,
+    );
+
+    // Create 3 questions for this day
+    const questionsData = [
+      {
+        questionText: `Câu hỏi 1 của Ngày ${dayIndex}: Bạn đã sẵn sàng chưa?`,
+        options: [
+          { id: "a", text: "Chưa", isCorrect: false },
+          { id: "b", text: "Sẵn sàng", isCorrect: true },
+          { id: "c", text: "Để mai tính", isCorrect: false },
+          { id: "d", text: "Không biết", isCorrect: false },
+        ],
+        order: 1,
+      },
+      {
+        questionText: `Câu hỏi 2 của Ngày ${dayIndex}: Trong các môn thể thao sau, môn nào chơi bằng tay?`,
+        options: [
+          { id: "a", text: "Bóng đá", isCorrect: false },
+          { id: "b", text: "Đua xe đạp", isCorrect: false },
+          { id: "c", text: "Bóng rổ", isCorrect: true },
+          { id: "d", text: "Điền kinh", isCorrect: false },
+        ],
+        order: 2,
+      },
+      {
+        questionText: `Câu hỏi 3 của Ngày ${dayIndex}: Đâu là thủ đô của một quốc gia?`,
+        options: [
+          { id: "a", text: "New York", isCorrect: false },
+          { id: "b", text: "Paris", isCorrect: true },
+          { id: "c", text: "Sydney", isCorrect: false },
+          { id: "d", text: "Toronto", isCorrect: false },
+        ],
+        order: 3,
+      },
+    ];
+
+    for (const q of questionsData) {
+      await prisma.question.upsert({
+        where: {
+          gameDayId_order: {
+            gameDayId: gameDay.id,
+            order: q.order,
+          },
+        },
+        update: {
+          questionText: q.questionText,
+          options: {
+            deleteMany: {},
+            create: q.options.map((opt) => ({
+              text: opt.text,
+              isCorrect: opt.isCorrect,
+            })),
+          },
+        },
+        create: {
+          gameDayId: gameDay.id,
+          questionText: q.questionText,
+          questionType: "MULTIPLE_CHOICE",
+          order: q.order,
+          points: 10,
+          timeLimitSeconds: 30,
+          options: {
+            create: q.options.map((opt) => ({
+              text: opt.text,
+              isCorrect: opt.isCorrect,
+            })),
+          },
+        },
+      });
+    }
+  }
+
+  console.log("\n🎉 Seeding 20 days completed!");
   console.log("📧 Admin login: admin@miniquiz.vn / admin123");
   console.log("📧 Player login: player1@test.com / player123");
 }
