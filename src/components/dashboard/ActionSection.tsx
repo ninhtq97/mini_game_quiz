@@ -1,9 +1,10 @@
 import { Button, Card, Chip, ProgressBar, Skeleton } from "@heroui/react";
 import { motion } from "framer-motion";
+import type { QuizOverviewData } from "@/app/quiz-provider";
 
 interface ActionSectionProps {
   loading: boolean;
-  quizData: any; // Type comes from useQuiz context but any is fine for this UI component for now
+  quizData: QuizOverviewData | null;
   onPlay: () => void;
 }
 
@@ -18,7 +19,7 @@ export default function DashboardActionSection({
   onPlay,
 }: ActionSectionProps) {
   const answeredCount =
-    quizData?.questions?.filter((q: any) => q.answered).length || 0;
+    quizData?.questions?.filter((q) => q.answered).length || 0;
   const totalQuestions = quizData?.questions?.length || 0;
   const progress =
     totalQuestions > 0 ? (answeredCount / totalQuestions) * 100 : 0;
